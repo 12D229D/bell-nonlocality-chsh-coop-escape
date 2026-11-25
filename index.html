@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bell Nonlocality: CHSH & GHZ Coop Escape Room</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-brand">
+      <span class="brand-icon">⚛️</span>
+      <div>
+        <h1>Bell Nonlocality: CHSH & GHZ Quantum Escape Room</h1>
+        <p class="subtitle">Simulador y Puzzle Cooperativo de Entrelazamiento, Violación de Bell y Cota de Tsirelson (Premio Nobel 2022)</p>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div class="control-group">
+        <label for="room-select">🚪 Seleccionar Cámara:</label>
+        <select id="room-select"></select>
+      </div>
+
+      <div class="control-group">
+        <label for="mode-toggle">🧪 Estrategia:</label>
+        <select id="mode-toggle">
+          <option value="quantum">Entrelazamiento Cuántico (EPR/GHZ)</option>
+          <option value="classical">Variables Ocultas Locales (LHV Clásico ≤ 75%)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="bell-state-select">📡 Par de Bell:</label>
+        <select id="bell-state-select">
+          <option value="phi_plus">|Φ⁺⟩ = (|00⟩ + |11⟩) / √2</option>
+          <option value="phi_minus">|Φ⁻⟩ = (|00⟩ - |11⟩) / √2</option>
+          <option value="psi_plus">|Ψ⁺⟩ = (|01⟩ + |10⟩) / √2</option>
+          <option value="psi_minus">|Ψ⁻⟩ = (|01⟩ - |10⟩) / √2</option>
+        </select>
+      </div>
+
+      <button id="btn-show-qasm" class="btn" title="Exportar circuito a OpenQASM 3.0">
+        📜 OpenQASM 3.0
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-container">
+
+    <!-- Active Room Banner -->
+    <section class="room-banner">
+      <div id="room-phase" class="room-badge">Fase I: Límites Clásicos (LHV)</div>
+      <h2 id="room-title">Cámara 1: El Dilema de la Esclusa Aislada</h2>
+      <p id="room-desc" class="room-desc">Cargando detalles de la cámara de escape...</p>
+      <div id="room-hint" class="room-hint">💡 Pista Cuántica: Configura los ángulos para maximizar la correlación.</div>
+    </section>
+
+    <!-- Split-Screen Chambers Layout -->
+    <section class="split-screen-grid">
+
+      <!-- Chamber A: Alice -->
+      <article class="chamber-card alice">
+        <div class="chamber-header">
+          <span class="chamber-title">📡 Cámara Alice (Nodo A)</span>
+          <span class="status-indicator">Blindaje Cuántico</span>
+        </div>
+
+        <div class="query-box">
+          <div class="query-label">Pregunta del Verificador (x)</div>
+          <div id="alice-query" class="query-val">0</div>
+        </div>
+
+        <div class="basis-controls">
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Base θA(0) [x=0]:</span>
+              <strong id="alice-angle-val0">0°</strong>
+            </div>
+            <input type="range" id="alice-angle0" min="-180" max="180" value="0" step="5">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Base θA(1) [x=1]:</span>
+              <strong id="alice-angle-val1">90°</strong>
+            </div>
+            <input type="range" id="alice-angle1" min="-180" max="180" value="90" step="5">
+          </div>
+        </div>
+
+        <button id="btn-alice-measure" class="btn primary">
+          ⚡ Proyectar Medición (Alice)
+        </button>
+
+        <div class="outcome-box">
+          <div class="outcome-label">Resultado Local (a ∈ {0, 1})</div>
+          <div id="alice-result" class="outcome-val">-</div>
+        </div>
+      </article>
+
+      <!-- Center: Verifier & Entanglement Channel -->
+      <article class="central-verifier">
+        <div class="verifier-header">
+          <span class="verifier-title">🛰️ Esclusa Central & Verificador CHSH</span>
+          <span id="round-badge" class="round-badge">Ronda 1 / 4</span>
+        </div>
+
+        <div class="canvas-wrapper">
+          <canvas id="canvas-photons" width="360" height="60"></canvas>
+        </div>
+
+        <div id="condition-formula" class="condition-formula">
+          Regla: a ⊕ b == (x · y)
+        </div>
+
+        <div id="condition-evaluation" class="evaluation-badge neutral">
+          En espera de mediciones locales...
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; width: 100%;">
+          <button id="btn-evaluate-round" class="btn" style="flex: 1;" disabled>
+            🔍 Evaluar Esclusa
+          </button>
+          <button id="btn-next-round" class="btn primary" style="flex: 1;" disabled>
+            ➡️ Siguiente Ronda
+          </button>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); width: 100%; padding-top: 0.75rem;">
+          <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+            <select id="batch-count-select">
+              <option value="100">100 Rondas</option>
+              <option value="500">500 Rondas</option>
+              <option value="1000" selected>1.000 Rondas</option>
+              <option value="5000">5.000 Rondas</option>
+            </select>
+            <button id="btn-batch-run" class="btn">
+              ⚡ Prueba Batch Monte Carlo
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Chamber B: Bob -->
+      <article class="chamber-card bob">
+        <div class="chamber-header">
+          <span class="chamber-title">📡 Cámara Bob (Nodo B)</span>
+          <span class="status-indicator">Blindaje Cuántico</span>
+        </div>
+
+        <div class="query-box">
+          <div class="query-label">Pregunta del Verificador (y)</div>
+          <div id="bob-query" class="query-val">0</div>
+        </div>
+
+        <div class="basis-controls">
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Base θB(0) [y=0]:</span>
+              <strong id="bob-angle-val0">45°</strong>
+            </div>
+            <input type="range" id="bob-angle0" min="-180" max="180" value="45" step="5">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Base θB(1) [y=1]:</span>
+              <strong id="bob-angle-val1">-45°</strong>
+            </div>
+            <input type="range" id="bob-angle1" min="-180" max="180" value="-45" step="5">
+          </div>
+        </div>
+
+        <button id="btn-bob-measure" class="btn primary">
+          ⚡ Proyectar Medición (Bob)
+        </button>
+
+        <div class="outcome-box">
+          <div class="outcome-label">Resultado Local (b ∈ {0, 1})</div>
+          <div id="bob-result" class="outcome-val">-</div>
+        </div>
+      </article>
+
+      <!-- Optional Chamber C: Charlie (GHZ Mode) -->
+      <article id="charlie-card" class="chamber-card charlie hidden" style="grid-column: 1 / -1;">
+        <div class="chamber-header">
+          <span class="chamber-title">📡 Cámara Charlie (Nodo C - Triplete GHZ)</span>
+          <span class="status-indicator">No-Localidad GHZ Mermin</span>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-around;">
+          <div class="query-box" style="flex: 1;">
+            <div class="query-label">Pregunta de Charlie (z)</div>
+            <div id="charlie-query" class="query-val">0</div>
+          </div>
+          <div class="outcome-box" style="flex: 1;">
+            <div class="outcome-label">Resultado de Charlie (c)</div>
+            <div id="charlie-result" class="outcome-val">-</div>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- Correlator & S-Parameter Meter -->
+    <section class="correlator-panel">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <h3>Medidor de Correlación CHSH (Parámetro S de Bell)</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Límite Clásico Local: <strong>S ≤ 2.0</strong> (Máx 75% éxito) | Cota Cuántica de Tsirelson: <strong>S = 2√2 ≈ 2.8284</strong> (~85.36% éxito)
+          </p>
+        </div>
+        <div id="win-rate-badge" class="round-badge" style="font-size: 1.1rem;">0.0% Éxito</div>
+      </div>
+
+      <div class="meter-wrapper">
+        <div class="meter-labels">
+          <span>0.0</span>
+          <span>Clásico Máx (2.0)</span>
+          <strong id="s-meter-value" style="color: var(--accent-quantum); font-size: 1.1rem;">0.000</strong>
+          <span>Tsirelson (2.828)</span>
+          <span>4.0 (Teórico no-físico PR-Box)</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div id="s-meter-fill" class="progress-bar-fill"></div>
+        </div>
+      </div>
+
+      <div id="bell-violation-alert" class="bell-violation-alert hidden">
+        🚨 ¡VIOLACIÓN DE BELL DETECTADA!
+      </div>
+    </section>
+
+    <!-- Persistent SQLite Stats -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Cámaras Desbloqueadas</div>
+        <div id="stat-rooms" class="stat-value">1/15</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Rondas Ganadas</div>
+        <div id="stat-wins" class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ensayos Totales Registrados</div>
+        <div id="stat-trials" class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Mejor Parámetro S de Bell</div>
+        <div id="stat-best-s" class="stat-value" style="color: var(--accent-quantum);">0.000</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- OpenQASM 3.0 Modal -->
+  <div id="qasm-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Circuito Equivalente OpenQASM 3.0</h3>
+        <button id="btn-close-qasm" class="btn" style="padding: 0.2rem 0.6rem;">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+          Este circuito puede ser ejecutado directamente en hardware de computación cuántica de IBM Quantum o simuladores qiskit / Braket.
+        </p>
+        <pre><code id="qasm-content"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-copy-qasm" class="btn primary">Copiar al Portapapeles</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Codex — <strong>bell-nonlocality-chsh-coop-escape</strong> | Capa 4 de Computación Cuántica Híbrida | Teorema de Bell & Premio Nobel de Física 2022</p>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
